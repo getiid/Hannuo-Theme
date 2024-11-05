@@ -11,11 +11,40 @@ const routes = [
   },
   {
     path: '/about',
-    name: 'About',
     component: () => import('../views/About.vue'),
     meta: {
       title: '关于我们 - 汉诺化工'
-    }
+    },
+    children: [
+      {
+        path: '',
+        redirect: '/about/company'
+      },
+      {
+        path: 'company',
+        name: 'Company',
+        component: () => import('../views/about/Company.vue'),
+        meta: {
+          title: '公司介绍 - 汉诺化工'
+        }
+      },
+      {
+        path: 'culture',
+        name: 'Culture',
+        component: () => import('../views/about/Culture.vue'),
+        meta: {
+          title: '企业文化 - 汉诺化工'
+        }
+      },
+      {
+        path: 'history',
+        name: 'History',
+        component: () => import('../views/about/History.vue'),
+        meta: {
+          title: '发展历程 - 汉诺化工'
+        }
+      }
+    ]
   },
   {
     path: '/products',

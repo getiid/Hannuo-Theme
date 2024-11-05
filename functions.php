@@ -84,6 +84,14 @@ function custom_rest_prepare_post($data, $post, $request) {
 }
 add_filter('rest_prepare_post', 'custom_rest_prepare_post', 10, 3);
 
+// 添加图片处理函数
+function get_image_url($image_id, $size = 'full') {
+    if (!$image_id) return null;
+    
+    $image = wp_get_attachment_image_src($image_id, $size);
+    return $image ? $image[0] : null;
+}
+
 // 修改页面REST API返回
 function custom_rest_prepare_page($data, $post, $request) {
     $_data = $data->data;
@@ -96,13 +104,42 @@ function custom_rest_prepare_page($data, $post, $request) {
         error_log('Raw ACF fields: ' . print_r($fields, true));
         
         if ($fields) {
-            // 根据页面类型处理不同的字段
-            if ($post->post_name === 'contact') {
+            if ($post->post_name === 'about') {
+                // 处理关于我们页面的数据
+                $_data['company'] = isset($fields['company']) ? $fields['company'] : [];
+                $_data['culture'] = isset($fields['culture']) ? $fields['culture'] : [];
+                $_data['history'] = isset($fields['history']) ? $fields['history'] : [];
+                
+                // 处理图片
+                if (isset($_data['company']['advantages']) && is_array($_data['company']['advantages'])) {
+                    foreach ($_data['company']['advantages'] as &$advantage) {
+                        if (isset($advantage['icon'])) {
+                            $advantage['icon'] = get_image_url($advantage['icon']);
+                        }
+                    }
+                }
+                
+                if (isset($_data['company']['certificates']) && is_array($_data['company']['certificates'])) {
+                    foreach ($_data['company']['certificates'] as &$cert) {
+                        if (isset($cert['image'])) {
+                            $cert['image'] = get_image_url($cert['image']);
+                        }
+                    }
+                }
+                
+                if (isset($_data['culture']['values']) && is_array($_data['culture']['values'])) {
+                    foreach ($_data['culture']['values'] as &$value) {
+                        if (isset($value['icon'])) {
+                            $value['icon'] = get_image_url($value['icon']);
+                        }
+                    }
+                }
+            } else if ($post->post_name === 'contact') {
                 // 联系我们页面字段
-                $_data['company_name'] = $fields['company_name'] ?? null;
-                $_data['address'] = $fields['address'] ?? null;
-                $_data['phone'] = $fields['phone'] ?? null;
-                $_data['email'] = $fields['email'] ?? null;
+                $_data['company_name'] = $fields['company_name'] ?? '';
+                $_data['address'] = $fields['address'] ?? '';
+                $_data['phone'] = $fields['phone'] ?? '';
+                $_data['email'] = $fields['email'] ?? '';
                 $_data['map_coordinates'] = $fields['map_coordinates'] ?? null;
                 $_data['working_hours'] = $fields['working_hours'] ?? [];
                 $_data['social_media'] = $fields['social_media'] ?? [];
@@ -115,11 +152,9 @@ function custom_rest_prepare_page($data, $post, $request) {
             
             // 添加所有ACF字段到acf属性中
             $_data['acf'] = $fields;
-            
-            error_log('Processed fields: ' . print_r($_data, true));
-        } else {
-            error_log('No ACF fields found for page ' . $post->ID);
         }
+        
+        error_log('Processed fields: ' . print_r($_data, true));
     }
     
     $data->data = $_data;
@@ -166,6 +201,7 @@ function register_custom_taxonomies() {
         'query_var' => true,
         'rewrite' => array('slug' => 'product-category'),
         'show_in_rest' => true,
+        'rest_base' => 'product_category',
     ));
 }
 add_action('init', 'register_custom_taxonomies');
@@ -255,3 +291,29 @@ function debug_acf_field_groups() {
     }
 }
 add_action('init', 'debug_acf_field_groups');
+
+// 添加产品分类到 REST API 响应
+function custom_rest_prepare_product($data, $post, $request) {
+    $_data = $data->data;
+    
+    // 添加产品分类
+    $_data['product_categories'] = wp_get_post_terms($post->ID, 'product_category');
+    
+    // 添加ACF字段
+    if (function_exists('get_fields')) {
+        $_data['acf'] = get_fields($post->ID);
+    }
+    
+    $data->data = $_data;
+    return $data;
+}
+add_filter('rest_prepare_products', 'custom_rest_prepare_product', 10, 3);
+
+// 添加调试日志
+function debug_api_response($response, $handler, $request) {
+    if (strpos($request->get_route(), '/wp/v2/pages') !== false) {
+        error_log('API Response for ' . $request->get_route() . ': ' . print_r($response, true));
+    }
+    return $response;
+}
+add_filter('rest_request_after_callbacks', 'debug_api_response', 10, 3);

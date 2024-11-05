@@ -6,51 +6,84 @@
     
     <div class="products-container">
       <!-- 左侧分类导航 -->
-      <ProductCategoryNav class="category-nav" />
+      <div class="left-sidebar">
+        <div class="category-nav">
+          <h2>产品分类</h2>
+          <ul class="main-categories">
+            <li v-for="category in mainCategories" 
+                :key="category.id"
+                :class="{ active: currentCategory === category.id }"
+                @click="selectCategory(category.id)">
+              {{ category.name }}
+            </li>
+          </ul>
+        </div>
+        
+        <!-- 搜索框 -->
+        <div class="search-box">
+          <input type="text" 
+                 v-model="searchQuery" 
+                 placeholder="搜索产品名称或CAS号"
+                 @input="handleSearch">
+        </div>
+      </div>
       
-      <!-- 右侧产品列表 -->
-      <div class="product-list-container">
-        <div v-if="loading" class="loading-state">
-          <div class="loading-spinner"></div>
-          <p>加载中...</p>
+      <!-- 右侧内容区 -->
+      <div class="content-area">
+        <!-- 二级分类导航 -->
+        <div class="sub-categories" v-if="subCategories.length">
+          <ul>
+            <li v-for="category in subCategories" 
+                :key="category.id"
+                :class="{ active: currentSubCategory === category.id }"
+                @click="selectSubCategory(category.id)">
+              {{ category.name }}
+            </li>
+          </ul>
         </div>
         
-        <div v-else-if="error" class="error-state">
-          <p>{{ error }}</p>
-          <button @click="fetchProducts">重试</button>
-        </div>
-        
-        <div v-else-if="products.length === 0" class="empty-state">
-          暂无产品
-        </div>
-        
-        <div v-else class="products-grid">
-          <div v-for="product in products" 
-               :key="product.id" 
-               class="product-card"
-               @click="goToDetail(product.id)">
-            <div class="product-image">
-              <img :src="product.product_images?.[0] || '/placeholder.jpg'" 
-                   :alt="product.title.rendered">
-            </div>
-            <div class="product-info">
-              <h3 class="product-title" v-html="product.title.rendered"></h3>
-              <p class="product-cas">CAS: {{ product.acf.cas }}</p>
-              <div class="product-meta">
-                <span class="product-purity" v-if="product.acf.purity">
-                  纯度: {{ product.acf.purity }}
-                </span>
-                <span class="product-packaging">
-                  {{ product.acf.packaging }}
-                </span>
-              </div>
+        <!-- 产品列表 -->
+        <div class="product-list">
+          <!-- 列表头部 -->
+          <div class="list-header">
+            <div class="col product-name">产品名称</div>
+            <div class="col product-cas">CAS号</div>
+            <div class="col product-packaging">包装</div>
+          </div>
+          
+          <!-- 加载状态 -->
+          <div v-if="loading" class="loading-state">
+            <div class="loading-spinner"></div>
+            <p>加载中...</p>
+          </div>
+          
+          <!-- 错误状态 -->
+          <div v-else-if="error" class="error-state">
+            <p>{{ error }}</p>
+            <button @click="fetchProducts">重试</button>
+          </div>
+          
+          <!-- 空状态 -->
+          <div v-else-if="filteredProducts.length === 0" class="empty-state">
+            暂无产品
+          </div>
+          
+          <!-- 产品列表 -->
+          <div v-else class="list-content">
+            <div v-for="product in filteredProducts" 
+                 :key="product.id" 
+                 class="product-row"
+                 @click="goToDetail(product.id)">
+              <div class="col product-name" v-html="product.title.rendered"></div>
+              <div class="col product-cas">{{ product.acf.cas }}</div>
+              <div class="col product-packaging">{{ product.acf.packaging }}</div>
             </div>
           </div>
-        </div>
-        
-        <!-- 分页加载 -->
-        <div class="pagination" v-if="hasMore && !loading">
-          <button @click="loadMore">加载更多</button>
+          
+          <!-- 分页加载 -->
+          <div class="pagination" v-if="hasMore && !loading">
+            <button @click="loadMore">加载更多</button>
+          </div>
         </div>
       </div>
     </div>
@@ -58,30 +91,70 @@
 </template>
 
 <script>
-import { ref, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import ProductCategoryNav from '../components/ProductCategoryNav.vue'
 import wpApi from '../services/wp-api'
 
 export default {
   name: 'Products',
-  components: {
-    ProductCategoryNav
-  },
   setup() {
     const route = useRoute()
     const router = useRouter()
     const products = ref([])
+    const categories = ref([])
     const loading = ref(false)
     const error = ref(null)
     const currentPage = ref(1)
     const hasMore = ref(true)
+    const searchQuery = ref('')
+    const currentCategory = ref(null)
+    const currentSubCategory = ref(null)
 
+    // 获取一级分类
+    const mainCategories = computed(() => {
+      return categories.value.filter(cat => cat.parent === 0)
+    })
+
+    // 获取当前一级分类下的二级分类
+    const subCategories = computed(() => {
+      if (!currentCategory.value) return []
+      return categories.value.filter(cat => cat.parent === currentCategory.value)
+    })
+
+    // 过滤后的产品列表
+    const filteredProducts = computed(() => {
+      let result = products.value
+      
+      // 搜索过滤
+      if (searchQuery.value) {
+        const query = searchQuery.value.toLowerCase().trim()
+        result = result.filter(product => {
+          const title = product.title.rendered.toLowerCase()
+          const cas = (product.acf?.cas || '').toLowerCase()
+          return title.includes(query) || cas.includes(query)
+        })
+      }
+      
+      return result
+    })
+
+    // 获取分类数据
+    const fetchCategories = async () => {
+      try {
+        const response = await wpApi.getProductCategories()
+        categories.value = response
+      } catch (error) {
+        console.error('获取分类失败:', error)
+      }
+    }
+
+    // 获取产品列表
     const fetchProducts = async (reset = false) => {
       try {
         if (reset) {
           currentPage.value = 1
           products.value = []
+          hasMore.value = true
         }
         
         loading.value = true
@@ -90,7 +163,7 @@ export default {
         const response = await wpApi.getProducts(
           currentPage.value,
           10,
-          route.params.categoryId
+          currentSubCategory.value || currentCategory.value
         )
         
         if (response.length < 10) {
@@ -112,6 +185,22 @@ export default {
       }
     }
 
+    const selectCategory = (categoryId) => {
+      currentCategory.value = categoryId
+      currentSubCategory.value = null
+      fetchProducts(true)
+    }
+
+    const selectSubCategory = (categoryId) => {
+      currentSubCategory.value = categoryId
+      fetchProducts(true)
+    }
+
+    const handleSearch = () => {
+      // 移除重新请求API的操作
+      // fetchProducts(true)  // 删除这行
+    }
+
     const loadMore = () => {
       if (!loading.value) {
         fetchProducts()
@@ -122,12 +211,8 @@ export default {
       router.push(`/products/${productId}`)
     }
 
-    // 监听分类变化
-    watch(() => route.params.categoryId, () => {
-      fetchProducts(true)
-    })
-
     onMounted(() => {
+      fetchCategories()
       fetchProducts()
     })
 
@@ -136,8 +221,17 @@ export default {
       loading,
       error,
       hasMore,
+      searchQuery,
+      currentCategory,
+      currentSubCategory,
+      mainCategories,
+      subCategories,
+      filteredProducts,
       loadMore,
-      goToDetail
+      goToDetail,
+      selectCategory,
+      selectSubCategory,
+      handleSearch
     }
   }
 }
@@ -155,75 +249,137 @@ export default {
   margin-bottom: 40px;
 }
 
-.products-header h1 {
-  font-size: 2em;
-  color: #333;
-}
-
 .products-container {
   display: grid;
   grid-template-columns: 250px 1fr;
   gap: 40px;
 }
 
-.products-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 30px;
+.left-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
-.product-card {
+.category-nav {
   background: white;
   border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-  transition: transform 0.3s ease;
-  cursor: pointer;
-}
-
-.product-card:hover {
-  transform: translateY(-5px);
-}
-
-.product-image {
-  width: 100%;
-  height: 200px;
-  overflow: hidden;
-}
-
-.product-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.3s ease;
-}
-
-.product-card:hover .product-image img {
-  transform: scale(1.05);
-}
-
-.product-info {
   padding: 20px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 }
 
-.product-title {
-  margin: 0 0 10px 0;
+.category-nav h2 {
+  margin-bottom: 20px;
+  color: #333;
   font-size: 1.2em;
+}
+
+.main-categories {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.main-categories li {
+  padding: 12px 15px;
+  cursor: pointer;
+  color: #666;
+  transition: all 0.3s ease;
+  border-radius: 4px;
+}
+
+.main-categories li:hover {
+  background: #f8f9fa;
+  color: #007bff;
+}
+
+.main-categories li.active {
+  background: #f8f9fa;
+  color: #007bff;
+}
+
+.search-box {
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.search-box input {
+  width: 100%;
+  padding: 10px 15px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: border-color 0.3s ease;
+}
+
+.search-box input:focus {
+  outline: none;
+  border-color: #007bff;
+}
+
+.search-box input::placeholder {
+  color: #999;
+}
+
+.sub-categories {
+  margin-bottom: 30px;
+}
+
+.sub-categories ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.sub-categories li {
+  padding: 8px 16px;
+  background: #f8f9fa;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #666;
+  transition: all 0.3s ease;
+}
+
+.sub-categories li:hover {
+  background: #e9ecef;
+  color: #007bff;
+}
+
+.sub-categories li.active {
+  background: #007bff;
+  color: white;
+}
+
+.list-header {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 8px 8px 0 0;
+  font-weight: bold;
   color: #333;
 }
 
-.product-cas {
-  color: #666;
-  font-size: 0.9em;
-  margin-bottom: 10px;
+.product-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  padding: 15px;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
 }
 
-.product-meta {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.9em;
-  color: #666;
+.product-row:hover {
+  background: #f8f9fa;
+}
+
+.col {
+  padding: 0 10px;
 }
 
 .loading-state,
@@ -234,25 +390,9 @@ export default {
   color: #666;
 }
 
-.loading-spinner {
-  display: inline-block;
-  width: 40px;
-  height: 40px;
-  border: 3px solid #f3f3f3;
-  border-top: 3px solid #007bff;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-bottom: 15px;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
 .pagination {
   text-align: center;
-  margin-top: 40px;
+  margin-top: 30px;
 }
 
 .pagination button {
@@ -262,11 +402,6 @@ export default {
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  transition: background-color 0.3s ease;
-}
-
-.pagination button:hover {
-  background: #0056b3;
 }
 
 @media (max-width: 768px) {

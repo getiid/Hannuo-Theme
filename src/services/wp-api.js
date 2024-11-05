@@ -50,15 +50,35 @@ const wpApi = {
     },
 
     // 获取产品列表
-    async getProducts(page = 1, perPage = 10) {
+    async getProducts(page = 1, perPage = 10, categoryId = null) {
         try {
-            const response = await axios.get(`${WP_API_CONFIG.BASE_URL}${WP_API_CONFIG.ENDPOINTS.PRODUCTS}`, {
-                params: {
-                    page,
-                    per_page: perPage
-                }
+            const params = {
+                page,
+                per_page: perPage,
+                _embed: true
+            };
+
+            // 如果有分类ID，添加到参数中
+            if (categoryId) {
+                params.product_category = categoryId;
+            }
+
+            const response = await apiClient.get(`${WP_API_CONFIG.ENDPOINTS.PRODUCTS}`, {
+                params
             });
-            return response.data;
+
+            if (response.data) {
+                // 处理返回的数据
+                const products = response.data.map(product => ({
+                    ...product,
+                    featured_image: product._embedded?.['wp:featuredmedia']?.[0]?.source_url || null,
+                    categories: product._embedded?.['wp:term']?.[0] || []
+                }));
+                
+                return products;
+            }
+            
+            return [];
         } catch (error) {
             console.error('获取产品列表失败:', error);
             throw error;
@@ -191,6 +211,68 @@ const wpApi = {
             throw new Error('文章不存在');
         } catch (error) {
             console.error('获取文章详情失败:', error);
+            throw error;
+        }
+    },
+
+    // 获取产品详情
+    async getProduct(id) {
+        try {
+            const response = await apiClient.get(`${WP_API_CONFIG.ENDPOINTS.PRODUCTS}/${id}`, {
+                params: {
+                    _embed: true
+                }
+            });
+            
+            if (response.data) {
+                // 处理返回的数据
+                return {
+                    ...response.data,
+                    categories: response.data._embedded?.['wp:term']?.[0] || []
+                };
+            }
+            throw new Error('产品不存在');
+        } catch (error) {
+            console.error('获取产品详情失败:', error);
+            throw error;
+        }
+    },
+
+    // 获取产品分类
+    async getProductCategories() {
+        try {
+            const response = await apiClient.get(`${WP_API_CONFIG.ENDPOINTS.PRODUCT_CATEGORIES}`);
+            return response.data;
+        } catch (error) {
+            console.error('获取产品分类失败:', error);
+            return [];
+        }
+    },
+
+    // 获取关于我们页面数据
+    async getAboutData() {
+        try {
+            console.log('Fetching about page data...');
+            const response = await apiClient.get(`${WP_API_CONFIG.ENDPOINTS.PAGES}`, {
+                params: {
+                    slug: 'about'
+                }
+            });
+            
+            console.log('About page response:', response);
+            
+            if (response.data && response.data.length > 0) {
+                const pageData = response.data[0];
+                console.log('About page data:', pageData);
+                return {
+                    company: pageData.company || {},
+                    culture: pageData.culture || {},
+                    history: pageData.history || []
+                };
+            }
+            throw new Error('未找到关于我们页面数据');
+        } catch (error) {
+            console.error('获取关于我们数据失败:', error);
             throw error;
         }
     }

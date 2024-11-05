@@ -3,6 +3,7 @@ export const WP_API_CONFIG = {
     ENDPOINTS: {
         POSTS: '/wp/v2/posts',
         PRODUCTS: '/wp/v2/products',
+        PRODUCT_CATEGORIES: '/wp/v2/product_category',
         CATEGORIES: '/wp/v2/categories',
         FEATURED_PRODUCTS: '/hannuo/v1/featured-products',
         PAGES: '/wp/v2/pages',
