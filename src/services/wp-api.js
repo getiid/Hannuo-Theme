@@ -263,10 +263,20 @@ const wpApi = {
             
             if (response.data && response.data.length > 0) {
                 const pageData = response.data[0];
-                console.log('About page data:', pageData);
+                console.log('About page raw data:', pageData);
+                
+                // 返回新的字段结构
                 return {
-                    company: pageData.company || {},
-                    culture: pageData.culture || {},
+                    company_intro: pageData.company_intro || {
+                        description: '',
+                        business_license: '',
+                        advantages: []
+                    },
+                    company_culture: pageData.company_culture || {
+                        mission: '',
+                        vision: '',
+                        core_values: []
+                    },
                     history: pageData.history || []
                 };
             }

@@ -18,28 +18,28 @@ const routes = [
     children: [
       {
         path: '',
-        redirect: '/about/company'
+        redirect: '/about/intro'
       },
       {
-        path: 'company',
-        name: 'Company',
-        component: () => import('../views/about/Company.vue'),
+        path: 'intro',
+        name: 'CompanyIntro',
+        component: () => import('../views/about/CompanyIntro.vue'),
         meta: {
-          title: '公司介绍 - 汉诺化工'
+          title: '企业介绍 - 汉诺化工'
         }
       },
       {
         path: 'culture',
-        name: 'Culture',
-        component: () => import('../views/about/Culture.vue'),
+        name: 'CompanyCulture',
+        component: () => import('../views/about/CompanyCulture.vue'),
         meta: {
           title: '企业文化 - 汉诺化工'
         }
       },
       {
         path: 'history',
-        name: 'History',
-        component: () => import('../views/about/History.vue'),
+        name: 'CompanyHistory',
+        component: () => import('../views/about/CompanyHistory.vue'),
         meta: {
           title: '发展历程 - 汉诺化工'
         }

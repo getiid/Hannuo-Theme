@@ -29,7 +29,7 @@ export default {
     const route = useRoute()
     
     const navItems = [
-      { name: '公司介绍', path: 'company' },
+      { name: '企业介绍', path: 'intro' },
       { name: '企业文化', path: 'culture' },
       { name: '发展历程', path: 'history' }
     ]
@@ -55,7 +55,7 @@ export default {
 
 .about-header {
   text-align: center;
-  margin-bottom: 40px;
+  margin-bottom: 60px;
 }
 
 h1 {
