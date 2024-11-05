@@ -1,0 +1,82 @@
+{
+    "key": "group_products",
+    "title": "产品信息",
+    "fields": [
+        {
+            "key": "field_cas",
+            "label": "CAS号",
+            "name": "cas",
+            "type": "text",
+            "required": 1,
+            "instructions": "产品的CAS登记号"
+        },
+        {
+            "key": "field_molecular_formula",
+            "label": "分子式",
+            "name": "molecular_formula",
+            "type": "text",
+            "required": 1
+        },
+        {
+            "key": "field_molecular_weight",
+            "label": "分子量",
+            "name": "molecular_weight",
+            "type": "text",
+            "required": 1
+        },
+        {
+            "key": "field_packaging",
+            "label": "包装",
+            "name": "packaging",
+            "type": "text",
+            "default_value": "定制 Customized"
+        },
+        {
+            "key": "field_purity",
+            "label": "纯度",
+            "name": "purity",
+            "type": "text"
+        },
+        {
+            "key": "field_specifications",
+            "label": "规格",
+            "name": "specifications",
+            "type": "repeater",
+            "layout": "table",
+            "sub_fields": [
+                {
+                    "key": "field_specification_value",
+                    "label": "规格值",
+                    "name": "value",
+                    "type": "text"
+                }
+            ]
+        },
+        {
+            "key": "field_product_images",
+            "label": "产品图片",
+            "name": "product_images",
+            "type": "gallery",
+            "return_format": "url",
+            "min": 1,
+            "max": 5
+        }
+    ],
+    "location": [
+        [
+            {
+                "param": "post_type",
+                "operator": "==",
+                "value": "products"
+            }
+        ]
+    ],
+    "menu_order": 0,
+    "position": "normal",
+    "style": "default",
+    "label_placement": "top",
+    "instruction_placement": "label",
+    "hide_on_screen": "",
+    "active": true,
+    "description": "产品详细信息字段"
+} 

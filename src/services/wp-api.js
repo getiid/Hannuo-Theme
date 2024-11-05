@@ -169,6 +169,30 @@ const wpApi = {
             console.error('获取研发生产数据失败:', error);
             throw error;
         }
+    },
+
+    // 获取单篇文章
+    async getPost(id) {
+        try {
+            const response = await apiClient.get(`${WP_API_CONFIG.ENDPOINTS.POSTS}/${id}`, {
+                params: {
+                    _embed: true
+                }
+            });
+            
+            if (response.data) {
+                // 处理返回的数据
+                return {
+                    ...response.data,
+                    featured_image: response.data._embedded?.['wp:featuredmedia']?.[0]?.source_url || null,
+                    categories_info: response.data._embedded?.['wp:term']?.[0] || []
+                };
+            }
+            throw new Error('文章不存在');
+        } catch (error) {
+            console.error('获取文章详情失败:', error);
+            throw error;
+        }
     }
 };
 

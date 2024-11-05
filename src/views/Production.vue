@@ -8,7 +8,7 @@
           :key="item.path"
           :to="`/production/${item.path}`"
           class="nav-item"
-          :class="{ active: currentPath === item.path }"
+          :class="{ active: isActive(item.path) }"
         >
           {{ item.name }}
         </router-link>
@@ -34,13 +34,13 @@ export default {
       { name: '质量控制', path: 'quality' }
     ]
     
-    const currentPath = computed(() => {
-      return route.path.split('/').pop()
-    })
+    const isActive = (path) => {
+      return route.path === `/production/${path}`
+    }
     
     return {
       navItems,
-      currentPath
+      isActive
     }
   }
 }

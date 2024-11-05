@@ -1,246 +1,277 @@
 <template>
-  <div class="products">
-    <!-- 产品分类 -->
-    <div class="category-filter">
-      <button 
-        v-for="category in categories" 
-        :key="category.id"
-        :class="{ active: currentCategory === category.id }"
-        @click="selectCategory(category.id)"
-      >
-        {{ category.name }}
-      </button>
+  <div class="products-page">
+    <div class="products-header">
+      <h1>产品中心</h1>
     </div>
-
-    <!-- 产品列表 -->
-    <div class="product-grid">
-      <div v-for="product in filteredProducts" :key="product.id" class="product-card">
-        <div class="product-image">
-          <img :src="product.featured_media_url" :alt="product.title.rendered">
+    
+    <div class="products-container">
+      <!-- 左侧分类导航 -->
+      <ProductCategoryNav class="category-nav" />
+      
+      <!-- 右侧产品列表 -->
+      <div class="product-list-container">
+        <div v-if="loading" class="loading-state">
+          <div class="loading-spinner"></div>
+          <p>加载中...</p>
         </div>
-        <div class="product-info">
-          <h3 v-html="product.title.rendered"></h3>
-          <div class="excerpt" v-html="product.excerpt.rendered"></div>
-          <button class="view-details" @click="showProductDetail(product)">
-            查看详情
-          </button>
+        
+        <div v-else-if="error" class="error-state">
+          <p>{{ error }}</p>
+          <button @click="fetchProducts">重试</button>
         </div>
-      </div>
-    </div>
-
-    <!-- 产品详情弹窗 -->
-    <div v-if="selectedProduct" class="product-modal" @click.self="closeModal">
-      <div class="modal-content">
-        <button class="close-button" @click="closeModal">&times;</button>
-        <h2 v-html="selectedProduct.title.rendered"></h2>
-        <div class="modal-body">
-          <img 
-            v-if="selectedProduct.featured_media_url" 
-            :src="selectedProduct.featured_media_url" 
-            :alt="selectedProduct.title.rendered"
-          >
-          <div class="product-description" v-html="selectedProduct.content.rendered"></div>
+        
+        <div v-else-if="products.length === 0" class="empty-state">
+          暂无产品
+        </div>
+        
+        <div v-else class="products-grid">
+          <div v-for="product in products" 
+               :key="product.id" 
+               class="product-card"
+               @click="goToDetail(product.id)">
+            <div class="product-image">
+              <img :src="product.product_images?.[0] || '/placeholder.jpg'" 
+                   :alt="product.title.rendered">
+            </div>
+            <div class="product-info">
+              <h3 class="product-title" v-html="product.title.rendered"></h3>
+              <p class="product-cas">CAS: {{ product.acf.cas }}</p>
+              <div class="product-meta">
+                <span class="product-purity" v-if="product.acf.purity">
+                  纯度: {{ product.acf.purity }}
+                </span>
+                <span class="product-packaging">
+                  {{ product.acf.packaging }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 分页加载 -->
+        <div class="pagination" v-if="hasMore && !loading">
+          <button @click="loadMore">加载更多</button>
         </div>
       </div>
     </div>
   </div>
 </template>
 
-<script setup>
-import { ref, computed, onMounted } from 'vue'
-import { getProducts, getCategories } from '../api/wordpress'
+<script>
+import { ref, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import ProductCategoryNav from '../components/ProductCategoryNav.vue'
+import wpApi from '../services/wp-api'
 
-const products = ref([])
-const categories = ref([])
-const currentCategory = ref(null)
-const selectedProduct = ref(null)
+export default {
+  name: 'Products',
+  components: {
+    ProductCategoryNav
+  },
+  setup() {
+    const route = useRoute()
+    const router = useRouter()
+    const products = ref([])
+    const loading = ref(false)
+    const error = ref(null)
+    const currentPage = ref(1)
+    const hasMore = ref(true)
 
-// 过滤产品
-const filteredProducts = computed(() => {
-  if (!currentCategory.value) return products.value
-  return products.value.filter(product => 
-    product.categories.includes(currentCategory.value)
-  )
-})
+    const fetchProducts = async (reset = false) => {
+      try {
+        if (reset) {
+          currentPage.value = 1
+          products.value = []
+        }
+        
+        loading.value = true
+        error.value = null
+        
+        const response = await wpApi.getProducts(
+          currentPage.value,
+          10,
+          route.params.categoryId
+        )
+        
+        if (response.length < 10) {
+          hasMore.value = false
+        }
+        
+        if (reset) {
+          products.value = response
+        } else {
+          products.value = [...products.value, ...response]
+        }
+        
+        currentPage.value++
+      } catch (err) {
+        console.error('获取产品列表失败:', err)
+        error.value = '加载产品失败，请稍后重试'
+      } finally {
+        loading.value = false
+      }
+    }
 
-// 选择分类
-const selectCategory = (categoryId) => {
-  currentCategory.value = currentCategory.value === categoryId ? null : categoryId
-}
+    const loadMore = () => {
+      if (!loading.value) {
+        fetchProducts()
+      }
+    }
 
-// 显示产品详情
-const showProductDetail = (product) => {
-  selectedProduct.value = product
-  document.body.style.overflow = 'hidden'
-}
+    const goToDetail = (productId) => {
+      router.push(`/products/${productId}`)
+    }
 
-// 关闭弹窗
-const closeModal = () => {
-  selectedProduct.value = null
-  document.body.style.overflow = 'auto'
-}
+    // 监听分类变化
+    watch(() => route.params.categoryId, () => {
+      fetchProducts(true)
+    })
 
-onMounted(async () => {
-  try {
-    const [productsRes, categoriesRes] = await Promise.all([
-      getProducts(),
-      getCategories()
-    ])
-    products.value = productsRes.data
-    categories.value = categoriesRes.data
-  } catch (error) {
-    console.error('Failed to fetch products data:', error)
+    onMounted(() => {
+      fetchProducts()
+    })
+
+    return {
+      products,
+      loading,
+      error,
+      hasMore,
+      loadMore,
+      goToDetail
+    }
   }
-})
+}
 </script>
 
-<style lang="scss" scoped>
-.products {
-  padding: 4rem 2rem;
+<style scoped>
+.products-page {
   max-width: 1200px;
   margin: 0 auto;
+  padding: 40px 20px;
+}
 
-  .category-filter {
-    margin-bottom: 3rem;
-    display: flex;
-    gap: 1rem;
-    flex-wrap: wrap;
+.products-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
 
-    button {
-      padding: 0.5rem 1.5rem;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      background: white;
-      cursor: pointer;
-      transition: all 0.3s;
+.products-header h1 {
+  font-size: 2em;
+  color: #333;
+}
 
-      &:hover {
-        border-color: #1890ff;
-        color: #1890ff;
-      }
+.products-container {
+  display: grid;
+  grid-template-columns: 250px 1fr;
+  gap: 40px;
+}
 
-      &.active {
-        background: #1890ff;
-        color: white;
-        border-color: #1890ff;
-      }
-    }
-  }
+.products-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 30px;
+}
 
-  .product-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 2rem;
-  }
+.product-card {
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  transition: transform 0.3s ease;
+  cursor: pointer;
+}
 
-  .product-card {
-    border: 1px solid #eee;
-    border-radius: 8px;
-    overflow: hidden;
-    transition: transform 0.3s;
+.product-card:hover {
+  transform: translateY(-5px);
+}
 
-    &:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-    }
+.product-image {
+  width: 100%;
+  height: 200px;
+  overflow: hidden;
+}
 
-    .product-image {
-      height: 200px;
-      overflow: hidden;
+.product-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
 
-      img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-      }
-    }
+.product-card:hover .product-image img {
+  transform: scale(1.05);
+}
 
-    .product-info {
-      padding: 1.5rem;
+.product-info {
+  padding: 20px;
+}
 
-      h3 {
-        margin: 0 0 1rem;
-        font-size: 1.2rem;
-        color: #333;
-      }
+.product-title {
+  margin: 0 0 10px 0;
+  font-size: 1.2em;
+  color: #333;
+}
 
-      .excerpt {
-        color: #666;
-        margin-bottom: 1rem;
-        line-height: 1.6;
-      }
+.product-cas {
+  color: #666;
+  font-size: 0.9em;
+  margin-bottom: 10px;
+}
 
-      .view-details {
-        padding: 0.5rem 1.5rem;
-        background: #1890ff;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        transition: background 0.3s;
+.product-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9em;
+  color: #666;
+}
 
-        &:hover {
-          background: #40a9ff;
-        }
-      }
-    }
-  }
+.loading-state,
+.error-state,
+.empty-state {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+}
 
-  .product-modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0,0,0,0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
+.loading-spinner {
+  display: inline-block;
+  width: 40px;
+  height: 40px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #007bff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 15px;
+}
 
-    .modal-content {
-      background: white;
-      padding: 2rem;
-      border-radius: 8px;
-      max-width: 800px;
-      width: 90%;
-      max-height: 90vh;
-      overflow-y: auto;
-      position: relative;
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
 
-      .close-button {
-        position: absolute;
-        top: 1rem;
-        right: 1rem;
-        background: none;
-        border: none;
-        font-size: 1.5rem;
-        cursor: pointer;
-        color: #666;
+.pagination {
+  text-align: center;
+  margin-top: 40px;
+}
 
-        &:hover {
-          color: #333;
-        }
-      }
+.pagination button {
+  padding: 10px 30px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
 
-      h2 {
-        margin-bottom: 1.5rem;
-        color: #333;
-      }
+.pagination button:hover {
+  background: #0056b3;
+}
 
-      .modal-body {
-        img {
-          max-width: 100%;
-          height: auto;
-          margin-bottom: 1.5rem;
-        }
-
-        .product-description {
-          line-height: 1.8;
-          color: #666;
-        }
-      }
-    }
+@media (max-width: 768px) {
+  .products-container {
+    grid-template-columns: 1fr;
   }
 }
 </style> 

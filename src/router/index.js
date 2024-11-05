@@ -59,7 +59,6 @@ const routes = [
   },
   {
     path: '/production',
-    name: 'Production',
     component: () => import('../views/Production.vue'),
     meta: {
       title: '研发生产 - 汉诺化工'
@@ -67,7 +66,7 @@ const routes = [
     children: [
       {
         path: '',
-        redirect: 'research'
+        redirect: '/production/research'
       },
       {
         path: 'research',

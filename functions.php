@@ -89,31 +89,37 @@ function custom_rest_prepare_page($data, $post, $request) {
     $_data = $data->data;
     
     error_log('Processing page in REST API: ' . $post->ID . ' - ' . $post->post_title);
-    error_log('Post type: ' . $post->post_type);
-    error_log('Post status: ' . $post->post_status);
     
-    // 获取并记录原始ACF字段
+    // 获取ACF字段
     if (function_exists('get_fields')) {
         $fields = get_fields($post->ID);
         error_log('Raw ACF fields: ' . print_r($fields, true));
         
         if ($fields) {
-            // 确保所有字段都被正确处理
-            $_data['company_name'] = $fields['company_name'] ?? null;
-            $_data['address'] = $fields['address'] ?? null;
-            $_data['phone'] = $fields['phone'] ?? null;
-            $_data['email'] = $fields['email'] ?? null;
-            $_data['map_coordinates'] = $fields['map_coordinates'] ?? null;
-            $_data['working_hours'] = $fields['working_hours'] ?? [];
-            $_data['social_media'] = $fields['social_media'] ?? [];
+            // 根据页面类型处理不同的字段
+            if ($post->post_name === 'contact') {
+                // 联系我们页面字段
+                $_data['company_name'] = $fields['company_name'] ?? null;
+                $_data['address'] = $fields['address'] ?? null;
+                $_data['phone'] = $fields['phone'] ?? null;
+                $_data['email'] = $fields['email'] ?? null;
+                $_data['map_coordinates'] = $fields['map_coordinates'] ?? null;
+                $_data['working_hours'] = $fields['working_hours'] ?? [];
+                $_data['social_media'] = $fields['social_media'] ?? [];
+            } else if ($post->post_name === 'production') {
+                // 研发生产页面字段
+                $_data['research_capabilities'] = $fields['research_capabilities'] ?? [];
+                $_data['equipment'] = $fields['equipment'] ?? [];
+                $_data['quality_control'] = $fields['quality_control'] ?? [];
+            }
             
-            // 记录处理后的数据
+            // 添加所有ACF字段到acf属性中
+            $_data['acf'] = $fields;
+            
             error_log('Processed fields: ' . print_r($_data, true));
         } else {
             error_log('No ACF fields found for page ' . $post->ID);
         }
-    } else {
-        error_log('ACF function get_fields not available');
     }
     
     $data->data = $_data;
@@ -136,14 +142,29 @@ function register_custom_post_types() {
 }
 add_action('init', 'register_custom_post_types');
 
-// 注册自定义分类法
+// 修改产品分类注册
 function register_custom_taxonomies() {
+    // 注册产品主分类
     register_taxonomy('product_category', 'products', array(
         'labels' => array(
             'name' => '产品分类',
-            'singular_name' => '产品分类'
+            'singular_name' => '产品分类',
+            'menu_name' => '产品分类',
+            'all_items' => '所有分类',
+            'parent_item' => '父级分类',
+            'parent_item_colon' => '父级分类:',
+            'new_item_name' => '新分类名称',
+            'add_new_item' => '添加新分类',
+            'edit_item' => '编辑分类',
+            'update_item' => '更新分类',
+            'search_items' => '搜索分类',
+            'add_or_remove_items' => '添加或删除分类'
         ),
         'hierarchical' => true,
+        'show_ui' => true,
+        'show_admin_column' => true,
+        'query_var' => true,
+        'rewrite' => array('slug' => 'product-category'),
         'show_in_rest' => true,
     ));
 }
