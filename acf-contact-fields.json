@@ -1,0 +1,118 @@
+{
+    "key": "group_contact_page",
+    "title": "联系我们页面设置",
+    "fields": [
+        {
+            "key": "field_company_name",
+            "label": "公司名称",
+            "name": "company_name",
+            "type": "text",
+            "required": 1,
+            "default_value": "汉诺化工"
+        },
+        {
+            "key": "field_address",
+            "label": "联系地址",
+            "name": "address",
+            "type": "text",
+            "required": 1
+        },
+        {
+            "key": "field_phone",
+            "label": "联系电话",
+            "name": "phone",
+            "type": "text",
+            "required": 1
+        },
+        {
+            "key": "field_email",
+            "label": "电子邮箱",
+            "name": "email",
+            "type": "email",
+            "required": 1
+        },
+        {
+            "key": "field_map_coordinates",
+            "label": "地图坐标",
+            "name": "map_coordinates",
+            "type": "group",
+            "layout": "block",
+            "sub_fields": [
+                {
+                    "key": "field_latitude",
+                    "label": "纬度",
+                    "name": "latitude",
+                    "type": "text",
+                    "required": 1
+                },
+                {
+                    "key": "field_longitude",
+                    "label": "经度",
+                    "name": "longitude",
+                    "type": "text",
+                    "required": 1
+                }
+            ]
+        },
+        {
+            "key": "field_working_hours",
+            "label": "工作时间",
+            "name": "working_hours",
+            "type": "repeater",
+            "layout": "table",
+            "sub_fields": [
+                {
+                    "key": "field_working_hours_description",
+                    "label": "时间描述",
+                    "name": "description",
+                    "type": "text"
+                }
+            ]
+        },
+        {
+            "key": "field_social_media",
+            "label": "社交媒体",
+            "name": "social_media",
+            "type": "repeater",
+            "layout": "table",
+            "sub_fields": [
+                {
+                    "key": "field_platform",
+                    "label": "平台名称",
+                    "name": "platform",
+                    "type": "text"
+                },
+                {
+                    "key": "field_social_url",
+                    "label": "链接",
+                    "name": "url",
+                    "type": "url"
+                },
+                {
+                    "key": "field_social_icon",
+                    "label": "图标",
+                    "name": "icon",
+                    "type": "image",
+                    "return_format": "url"
+                }
+            ]
+        }
+    ],
+    "location": [
+        [
+            {
+                "param": "page_template",
+                "operator": "==",
+                "value": "default"
+            }
+        ]
+    ],
+    "menu_order": 0,
+    "position": "normal",
+    "style": "default",
+    "label_placement": "top",
+    "instruction_placement": "label",
+    "hide_on_screen": "",
+    "active": true,
+    "description": "联系我们页面的设置选项"
+} 

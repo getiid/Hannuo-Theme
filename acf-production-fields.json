@@ -1,0 +1,143 @@
+{
+    "key": "group_production_page",
+    "title": "研发生产页面设置",
+    "fields": [
+        {
+            "key": "field_research_capabilities",
+            "label": "研发能力",
+            "name": "research_capabilities",
+            "type": "repeater",
+            "layout": "block",
+            "sub_fields": [
+                {
+                    "key": "field_research_icon",
+                    "label": "图标",
+                    "name": "icon",
+                    "type": "image",
+                    "return_format": "url",
+                    "preview_size": "medium",
+                    "required": 1
+                },
+                {
+                    "key": "field_research_title",
+                    "label": "标题",
+                    "name": "title",
+                    "type": "text",
+                    "required": 1
+                },
+                {
+                    "key": "field_research_description",
+                    "label": "描述",
+                    "name": "description",
+                    "type": "textarea",
+                    "rows": 4
+                }
+            ]
+        },
+        {
+            "key": "field_equipment",
+            "label": "生产设备",
+            "name": "equipment",
+            "type": "repeater",
+            "layout": "block",
+            "sub_fields": [
+                {
+                    "key": "field_equipment_image",
+                    "label": "设备图片",
+                    "name": "image",
+                    "type": "image",
+                    "return_format": "url",
+                    "preview_size": "medium",
+                    "required": 1
+                },
+                {
+                    "key": "field_equipment_name",
+                    "label": "设备名称",
+                    "name": "name",
+                    "type": "text",
+                    "required": 1
+                },
+                {
+                    "key": "field_equipment_description",
+                    "label": "设备描述",
+                    "name": "description",
+                    "type": "textarea",
+                    "rows": 4
+                },
+                {
+                    "key": "field_equipment_specifications",
+                    "label": "规格参数",
+                    "name": "specifications",
+                    "type": "repeater",
+                    "layout": "table",
+                    "sub_fields": [
+                        {
+                            "key": "field_specification",
+                            "label": "参数",
+                            "name": "spec",
+                            "type": "text"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "key": "field_quality_control",
+            "label": "质量控制",
+            "name": "quality_control",
+            "type": "group",
+            "layout": "block",
+            "sub_fields": [
+                {
+                    "key": "field_quality_content",
+                    "label": "内容",
+                    "name": "content",
+                    "type": "wysiwyg",
+                    "tabs": "all",
+                    "toolbar": "full",
+                    "media_upload": 1
+                },
+                {
+                    "key": "field_quality_images",
+                    "label": "图片展示",
+                    "name": "images",
+                    "type": "repeater",
+                    "layout": "table",
+                    "sub_fields": [
+                        {
+                            "key": "field_quality_image",
+                            "label": "图片",
+                            "name": "url",
+                            "type": "image",
+                            "return_format": "url",
+                            "preview_size": "medium"
+                        },
+                        {
+                            "key": "field_quality_image_title",
+                            "label": "标题",
+                            "name": "title",
+                            "type": "text"
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "location": [
+        [
+            {
+                "param": "page",
+                "operator": "==",
+                "value": "production"
+            }
+        ]
+    ],
+    "menu_order": 0,
+    "position": "normal",
+    "style": "default",
+    "label_placement": "top",
+    "instruction_placement": "label",
+    "hide_on_screen": "",
+    "active": true,
+    "description": "研发生产页面的设置选项"
+} 

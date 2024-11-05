@@ -5,6 +5,22 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>汉诺化工</title>
+    <script>
+    async function fetchAPI() {
+        try {
+            const response = await fetch('您的API端点');
+            const data = await response.json();
+            console.log(data);
+        } catch (error) {
+            console.error('API 调用出错:', error);
+        }
+    }
+    </script>
+    <script type="text/javascript">
+      window.BMAP_PROTOCOL = "https";
+      window.BMap_loadScriptTime = (new Date).getTime();
+    </script>
+    <script type="text/javascript" src="https://api.map.baidu.com/getscript?v=3.0&ak=U2MLFKnQOmvXKJYpHh6IARaOshCHk3US&services=&t=20240105"></script>
   </head>
   <body>
     <div id="app"></div>
