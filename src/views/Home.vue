@@ -1,59 +1,43 @@
 <template>
-  <div class="home">
-    <!-- 轮播图部分 -->
-    <div class="banner-section">
-      <div class="banner-content" v-if="homeData">
-        <div v-for="(slide, index) in homeData.banner_slides" :key="index" 
-             class="banner-slide" 
-             :class="{ active: currentSlide === index }">
-          <img :src="slide.image" :alt="slide.title">
-          <div class="slide-content">
-            <h2>{{ slide.title }}</h2>
-            <p>{{ slide.description }}</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 公司简介部分 -->
-    <div class="company-intro" v-if="homeData">
-      <div class="container">
-        <h2>{{ homeData.company_intro_title }}</h2>
-        <div class="intro-content" v-html="homeData.company_intro_content"></div>
-      </div>
-    </div>
-
-    <!-- 特色产品部分 -->
-    <div class="featured-products">
-      <div class="container">
-        <h2>特色产品</h2>
-        <div class="products-grid">
-          <div v-for="product in featuredProducts" :key="product.id" class="product-card">
-            <img :src="product.featured_image" :alt="product.title">
-            <h3>{{ product.title }}</h3>
-            <p v-html="product.excerpt"></p>
-            <router-link :to="`/products/${product.id}`" class="view-more">
-              了解更多
-            </router-link>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 新闻动态部分 -->
-    <div class="latest-news">
-      <div class="container">
+  <div class="home-page">
+    <!-- Banner轮播 -->
+    <HomeBanner v-if="homeData?.banner?.length" :bannerData="homeData.banner" />
+    
+    <!-- 特色板块 -->
+    <HomeFeatures v-if="homeData?.features?.length" :features="homeData.features" />
+    
+    <!-- 关于我们引用 -->
+    <HomeAbout v-if="homeData?.about" :aboutData="homeData.about" />
+    
+    <!-- 产品分类 -->
+    <HomeProducts v-if="homeData?.product_categories" :productData="homeData.product_categories" />
+    
+    <!-- 新闻动态 -->
+    <div class="home-news">
+      <div class="section-header">
         <h2>新闻动态</h2>
-        <div class="news-grid">
-          <div v-for="post in latestNews" :key="post.id" class="news-card">
-            <div class="news-date">{{ formatDate(post.date) }}</div>
-            <h3 v-html="post.title.rendered"></h3>
-            <div class="news-excerpt" v-html="post.excerpt.rendered"></div>
-            <router-link :to="`/news/${post.id}`" class="read-more">
-              阅读更多
-            </router-link>
+        <div class="divider"></div>
+      </div>
+      <div class="news-grid" v-if="homeData?.latest_news?.length">
+        <div v-for="news in homeData.latest_news" 
+             :key="news.id" 
+             class="news-item"
+             @click="goToNews(news.id)">
+          <div class="news-image" v-if="news.featured_image">
+            <img :src="news.featured_image" :alt="news.title.rendered">
+          </div>
+          <div class="news-content">
+            <div class="news-date">{{ formatDate(news.date) }}</div>
+            <h3 class="news-title" v-html="news.title.rendered"></h3>
+            <div class="news-excerpt" v-html="news.excerpt.rendered"></div>
           </div>
         </div>
+      </div>
+      <div class="view-more">
+        <router-link to="/news" class="view-more-link">
+          查看更多新闻
+          <i class="fas fa-arrow-right"></i>
+        </router-link>
       </div>
     </div>
   </div>
@@ -61,202 +45,182 @@
 
 <script>
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import HomeBanner from '../components/HomeBanner.vue'
+import HomeFeatures from '../components/HomeFeatures.vue'
+import HomeAbout from '../components/HomeAbout.vue'
+import HomeProducts from '../components/HomeProducts.vue'
 import wpApi from '../services/wp-api'
 
 export default {
   name: 'Home',
+  components: {
+    HomeBanner,
+    HomeFeatures,
+    HomeAbout,
+    HomeProducts
+  },
   setup() {
+    const router = useRouter()
     const homeData = ref(null)
-    const featuredProducts = ref([])
-    const latestNews = ref([])
-    const currentSlide = ref(0)
+    const loading = ref(true)
+    const error = ref(null)
 
     const formatDate = (dateString) => {
       const date = new Date(dateString)
       return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
     }
 
+    const goToNews = (id) => {
+      router.push(`/news/${id}`)
+    }
+
     const fetchHomeData = async () => {
       try {
+        loading.value = true
+        error.value = null
         const response = await wpApi.getHomeData()
-        console.log('Home data:', response)
-        homeData.value = response.acf || response
-      } catch (error) {
-        console.error('获取首页数据失败:', error)
+        console.log('Home page data:', response)
+        homeData.value = response
+      } catch (err) {
+        console.error('获取首页数据失败:', err)
+        error.value = '加载失败'
+      } finally {
+        loading.value = false
       }
     }
 
-    const fetchFeaturedProducts = async () => {
-      try {
-        const response = await wpApi.getFeaturedProducts()
-        featuredProducts.value = response
-      } catch (error) {
-        console.error('获取特色产品失败:', error)
-      }
-    }
-
-    const fetchLatestNews = async () => {
-      try {
-        const response = await wpApi.getPosts(1, 3) // 获取最新的3条新闻
-        latestNews.value = response
-      } catch (error) {
-        console.error('获取最新新闻失败:', error)
-      }
-    }
-
-    // 轮播图自动切换
-    const startSlideshow = () => {
-      setInterval(() => {
-        if (homeData.value && homeData.value.banner_slides) {
-          currentSlide.value = (currentSlide.value + 1) % homeData.value.banner_slides.length
-        }
-      }, 5000) // 每5秒切换一次
-    }
-
-    onMounted(() => {
-      fetchHomeData()
-      fetchFeaturedProducts()
-      fetchLatestNews()
-      startSlideshow()
-    })
+    onMounted(fetchHomeData)
 
     return {
       homeData,
-      featuredProducts,
-      latestNews,
-      currentSlide,
-      formatDate
+      loading,
+      error,
+      formatDate,
+      goToNews
     }
   }
 }
 </script>
 
 <style scoped>
-.home {
-  width: 100%;
+.home-page {
+  /* 每个组件都有自己的内边距，这里不需要额外的样式 */
 }
 
-.banner-section {
-  position: relative;
-  height: 600px;
-  overflow: hidden;
+.home-news {
+  padding: 80px 0;
+  background: #fff;
 }
 
-.banner-slide {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  transition: opacity 0.5s ease-in-out;
+.section-header {
+  text-align: center;
+  margin-bottom: 60px;
 }
 
-.banner-slide.active {
-  opacity: 1;
+.section-header h2 {
+  font-size: 2.2em;
+  color: #333;
+  margin-bottom: 15px;
 }
 
-.banner-slide img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.slide-content {
-  position: absolute;
-  bottom: 50px;
-  left: 50px;
-  color: white;
-  text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-}
-
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 40px 20px;
-}
-
-.company-intro {
-  background: #f8f9fa;
-  padding: 60px 0;
-}
-
-.products-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 30px;
-  margin-top: 30px;
-}
-
-.product-card {
-  background: white;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-}
-
-.product-card img {
-  width: 100%;
-  height: 200px;
-  object-fit: cover;
-}
-
-.product-card h3 {
-  padding: 15px;
-  margin: 0;
-}
-
-.product-card p {
-  padding: 0 15px;
-  color: #666;
-}
-
-.view-more {
-  display: inline-block;
-  margin: 15px;
-  padding: 8px 20px;
+.divider {
+  width: 60px;
+  height: 3px;
   background: #007bff;
-  color: white;
-  text-decoration: none;
-  border-radius: 4px;
+  margin: 0 auto;
 }
 
 .news-grid {
+  max-width: 1200px;
+  margin: 0 auto;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 30px;
-  margin-top: 30px;
+  padding: 0 20px;
 }
 
-.news-card {
-  background: white;
-  padding: 20px;
+.news-item {
+  background: #fff;
   border-radius: 8px;
+  overflow: hidden;
   box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.news-item:hover {
+  transform: translateY(-5px);
+}
+
+.news-image {
+  width: 100%;
+  height: 200px;
+  overflow: hidden;
+}
+
+.news-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.news-item:hover .news-image img {
+  transform: scale(1.05);
+}
+
+.news-content {
+  padding: 20px;
 }
 
 .news-date {
   color: #666;
   font-size: 0.9em;
+  margin-bottom: 10px;
 }
 
-.news-card h3 {
-  margin: 10px 0;
+.news-title {
+  font-size: 1.2em;
+  color: #333;
+  margin-bottom: 10px;
+  line-height: 1.4;
 }
 
-.read-more {
-  display: inline-block;
-  margin-top: 15px;
+.news-excerpt {
+  color: #666;
+  font-size: 0.9em;
+  line-height: 1.6;
+}
+
+.view-more {
+  text-align: center;
+  margin-top: 40px;
+}
+
+.view-more-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   color: #007bff;
   text-decoration: none;
+  font-weight: 500;
+  transition: gap 0.3s ease;
 }
 
-@media (max-width: 768px) {
-  .banner-section {
-    height: 400px;
-  }
+.view-more-link:hover {
+  gap: 15px;
+}
 
-  .slide-content {
-    left: 20px;
-    bottom: 20px;
+@media (max-width: 1024px) {
+  .news-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .news-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style> 

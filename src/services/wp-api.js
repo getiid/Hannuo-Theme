@@ -151,23 +151,45 @@ const wpApi = {
     async getHomeData() {
         try {
             console.log('Fetching home page data...');
-            const response = await axios.get(`${WP_API_CONFIG.BASE_URL}${WP_API_CONFIG.ENDPOINTS.PAGES}`, {
+            const response = await apiClient.get(`${WP_API_CONFIG.ENDPOINTS.PAGES}`, {
                 params: {
                     slug: 'home'
                 }
             });
-            console.log('Full API response:', response.data);
+            
+            // 获取最新新闻
+            const latestNews = await this.getPosts(1, 3);
+            
+            // 获取关于我们页面数据
+            const aboutResponse = await apiClient.get(`${WP_API_CONFIG.ENDPOINTS.PAGES}`, {
+                params: {
+                    slug: 'about'
+                }
+            });
+            
+            const aboutData = aboutResponse.data && aboutResponse.data.length > 0 
+                ? aboutResponse.data[0].acf?.company_intro 
+                : null;
             
             if (response.data && response.data.length > 0) {
                 const pageData = response.data[0];
-                console.log('Home page found:', pageData);
-                // 返回ACF字段数据
-                return pageData.acf || {};
+                console.log('Home page data:', pageData);
+                
+                // 组合所有需要的数据
+                return {
+                    banner: pageData.acf?.banner || [],
+                    features: pageData.acf?.features || [],
+                    about: aboutData,
+                    product_categories: pageData.acf?.product_categories || {
+                        amino_acids: {},
+                        reagents: {}
+                    },
+                    latest_news: latestNews || []
+                };
             }
-            console.error('Home page not found in response');
             throw new Error('Home page not found');
         } catch (error) {
-            console.error('Error details:', error.response || error);
+            console.error('Error fetching home page data:', error);
             throw error;
         }
     },
